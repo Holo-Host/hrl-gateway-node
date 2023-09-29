@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import { Codec, KeyManager, deriveSeedFrom } from '@holo-host/cryptolib'
 import EnvoyApi from './envoyApi.js'; // Update with actual import if required
 import * as dotenv from 'dotenv';

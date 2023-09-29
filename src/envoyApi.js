@@ -1,14 +1,15 @@
 import { randomNonce, getNonceExpiration, hashZomeCall } from '@holochain/client';
-import { Codec, HHT, KeyPair } from '@holo-host/cryptolib';
-const { EventEmitter } = require('events');
-const WebSocket = require('isomorphic-ws');
-const msgpack = require('@msgpack/msgpack');
-const {
+import pkg from '@holo-host/cryptolib';
+const { Codec, HHT } = pkg;
+import  { EventEmitter } from 'events';
+import WebSocket from 'isomorphic-ws';
+import msgpack from '@msgpack/msgpack';
+import {
   msgpackDecodeFromBlob,
   serializeAndHash,
   getHostIdFromUrl,
   holoEncodeDnaHash,
-} = require('./utils');
+} from './utils.js';
 
 const HappConfig = {
   name: '',
