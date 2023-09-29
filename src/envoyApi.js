@@ -32,8 +32,8 @@ export default class EnvoyApi extends EventEmitter {
     this.zome_call_response_consumers = {};
     this.next_zome_call_id = 0;
 
-    const scheme = process.env.CHAPERONE_CONFIG_SECURE_WS ? 'wss' : 'ws';
-
+    const scheme = process.env.CHAPERONE_CONFIG_SECURE_WS ? 'wss' : 'wss';
+    
     this.envoy_ws = new WebSocket(
       `${scheme}://${host_url}/hosting/?agent=${agent_id}&happ=${happ_id}${
         is_anonymous ? '&anonymous' : ''
@@ -42,6 +42,7 @@ export default class EnvoyApi extends EventEmitter {
 
     this.envoy_ws.onopen = () => this.emit('open');
     this.envoy_ws.onclose = () => this.emit('close');
+
     this.envoy_ws.onmessage = async (message) => {
       const decoded_message = await msgpackDecodeFromBlob(message.data);
 
@@ -66,7 +67,7 @@ export default class EnvoyApi extends EventEmitter {
           console.log('unknown message type', decoded_message);
       }
     };
-  
+
     // keep alive heart beat
     this.heartbeat_interval = setInterval(() => {
       this.get_app_status()
@@ -88,12 +89,45 @@ export default class EnvoyApi extends EventEmitter {
     await this.sendRequest(enable_request())
   }
 
+  async wait_for_app_status() {
+    const id = this.next_response_id++
+    console.log('EnvoyApi: Waiting for app status')
+    
+    this.sendRequest(app_status_request())
+    
+    return new Promise((resolve) => {
+      this.once('app_status_changed', resolve);
+    });
+  }
+
+  async get_cell_id(role_name) {
+    console.log('EnvoyApi: Getting cell id for role_name', role_name);
+
+    const app_status = await this.wait_for_app_status();
+
+    if (app_status.type !== 'installed') {
+        throw new Error(`App is not installed. Current status: ${app_status.type}`);
+    }
+
+    const app_info = app_status.data;
+    const cell_info = app_info.cell_info[role_name]?.[0];
+
+    if (!cell_info) {
+        throw new Error(`Cell with role_name ${role_name} not found`);
+    }
+
+    return Object.values(cell_info)[0].cell_id;
+  }
+
   async zome_call (zome_call_args) {
     console.log('EnvoyApi: Making zome call', zome_call_args)
     const id = this.next_zome_call_id++ 
 
+    const cell_id = await this.get_cell_id(zome_call_args.role_name)
+
     const request = await zome_call_request({
       ...zome_call_args,
+      cell_id,  
       key_pair: this.key_pair,
       hha_hash: this.happ_id,
       id,

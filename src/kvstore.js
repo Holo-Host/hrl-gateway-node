@@ -29,7 +29,7 @@ class CloudflareKV {
 
     try {
       const response = await axios.get(url, { headers: this.headers });
-      return response.data.keys.map(keyObj => keyObj.name);
+      return response.data.result.map(keyObj => keyObj.name);
     } catch (error) {
       console.error('Error listing keys:', error);
       throw error;

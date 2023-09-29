@@ -1,13 +1,16 @@
 import * as msgpack from '@msgpack/msgpack';
 import SerializeJSON from 'json-stable-stringify';
 import { writable } from 'svelte/store';
+import crypto from 'crypto';
+import { Codec } from '@holo-host/cryptolib';
 
 // this can be removed if we set binary type of ws connection to "arrayBuff"
-export async function msgpackDecodeFromBlob(blob) {
-  if (blob.stream) {
-    return await msgpack.decodeAsync(blob.stream());
+export async function msgpackDecodeFromBlob(buffer) {
+  if (Buffer.isBuffer(buffer)) {
+    return msgpack.decode(buffer);
   } else {
-    return msgpack.decode(await blob.arrayBuffer());
+    console.error('Input is not a Buffer:', buffer);
+    // Handle the error as appropriate for your application
   }
 }
 
@@ -29,21 +32,8 @@ export function getHostIdFromUrl(host_url) {
 
 // This should be handled entirely by cryptolib, but it doesn't quite play nice
 export function holoEncodeDnaHash(dna_hash) {
-  const { Codec } = getCryptolib();
   const url_unsafe = 'u' + Codec.Signature.encode(Buffer.from(dna_hash));
   return convert_b64_to_holohash_b64(url_unsafe);
-}
-
-export const cryptolibStore = writable(null);
-
-export const getCryptolib = () => {
-  let gottenCryptolib;
-  cryptolibStore.update(cryptolib => {
-    gottenCryptolib = cryptolib;
-    return cryptolib;
-  });
-
-  return gottenCryptolib;
 }
 
 function convert_b64_to_holohash_b64(rawBase64) {

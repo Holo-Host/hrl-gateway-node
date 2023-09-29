@@ -25,11 +25,11 @@ const happ2hostKV = new CloudflareKV(accountId, happ2hostId, apiToken);
 async function fetchRoleAndZome(happ_id) {
   const value = await happ2hrlKV.get(happ_id);
   console.log(`Fetched role and zome for happ_id: ${happ_id}`);
-  return JSON.parse(value);
+  return JSON.parse(JSON.stringify(value));
 }
 
-async function fetchHostUrl(happId) {
-  const keys = await happ2hostKV.listKeys(`${happId}`);
+async function fetchHostUrl(happ_id) {
+  const keys = await happ2hostKV.listKeys(`${happ_id}`);
   console.log(`Fetched keys: ${JSON.stringify(keys)}`);
   const randomKey = keys[Math.floor(Math.random() * keys.length)];
   const host_url = await happ2hostKV.get(randomKey);
@@ -43,16 +43,16 @@ function delay(ms) {
 
 app.get('/:happ_id/:token_id', async (req, res) => {
   const { happ_id, token_id } = req.params;
-  console.log(`Processing request for happ_id: ${happId}`);
+  console.log(`Processing request for happ_id: ${happ_id}`);
   
   const { role_name, zome_name, fn_name } = await fetchRoleAndZome(happ_id);
   const hostId = await fetchHostUrl(happ_id);
   const host_url = `${hostId}.holohost.dev`;
   
-  console.log(`Role: ${role_name}`);
-  console.log(`Zome: ${zome_name}`);
-  console.log(`Fn: ${fn_name}`);
-  console.log(`Host URL: ${host_url}`);
+  // console.log(`Role: ${role_name}`);
+  // console.log(`Zome: ${zome_name}`);
+  // console.log(`Fn: ${fn_name}`);
+  // console.log(`Host URL: ${host_url}`);
   
   console.log("Generating key pair");
   const hha_id = new Uint8Array([
@@ -77,13 +77,13 @@ app.get('/:happ_id/:token_id', async (req, res) => {
   await delay(1000);
   
   console.log("Calling envoy api");
-  const response = await envoyApi.zomeCall({
-    zomeName: zome_name,
-    fnName: fn_name,
+  const response = await envoyApi.zome_call({
+    zome_name: zome_name,
+    fn_name: fn_name,
     payload: token_id,
-    roleName: role_name,
-    cellId: null,
-    capSecret: null,
+    role_name: role_name,
+    cell_id: null,
+    cap_secret: null,
   });
 
   envoyApi.close();
