@@ -22,9 +22,9 @@ if (!accountId || !happ2hrlId || !happ2hostId || !apiToken) {
 const happ2hrlKV = new CloudflareKV(accountId, happ2hrlId, apiToken);
 const happ2hostKV = new CloudflareKV(accountId, happ2hostId, apiToken);
 
-async function fetchRoleAndZome(happId) {
-  const value = await happ2hrlKV.get(happId);
-  console.log(`Fetched role and zome for happ_id: ${happId}`);
+async function fetchRoleAndZome(happ_id) {
+  const value = await happ2hrlKV.get(happ_id);
+  console.log(`Fetched role and zome for happ_id: ${happ_id}`);
   return JSON.parse(value);
 }
 
@@ -32,17 +32,17 @@ async function fetchHostUrl(happId) {
   const keys = await happ2hostKV.listKeys(`${happId}`);
   console.log(`Fetched keys: ${JSON.stringify(keys)}`);
   const randomKey = keys[Math.floor(Math.random() * keys.length)];
-  const hostUrl = await happ2hostKV.get(randomKey);
-  console.log(`Fetched host_url: ${hostUrl}`);
-  return hostUrl;
+  const host_url = await happ2hostKV.get(randomKey);
+  console.log(`Fetched host_url: ${host_url}`);
+  return host_url;
 }
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-app.get('/:happId/:tokenId', async (req, res) => {
-  const { happId, tokenId } = req.params;
+app.get('/:happ_id/:token_id', async (req, res) => {
+  const { happ_id, token_id } = req.params;
   console.log(`Processing request for happ_id: ${happId}`);
   
   const { role_name, zome_name, fn_name } = await fetchRoleAndZome(happ_id);
@@ -80,7 +80,7 @@ app.get('/:happId/:tokenId', async (req, res) => {
   const response = await envoyApi.zomeCall({
     zomeName: zome_name,
     fnName: fn_name,
-    payload: tokenId,
+    payload: token_id,
     roleName: role_name,
     cellId: null,
     capSecret: null,
