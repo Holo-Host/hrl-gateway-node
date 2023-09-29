@@ -2,18 +2,31 @@
   "name": "gateway-node",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/express": "^4.17.18",
-    "@types/node": "^20.7.1"
+    "@types/node": "^20.7.1",
+    "@types/ws": "^8.5.6",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1"
   },
   "dependencies": {
     "@holo-host/cryptolib": "^0.3.2",
-    "@holochain/client": "^0.16.2"
+    "@holochain/client": "^0.16.2",
+    "axios": "^1.5.1",
+    "crypto-browserify": "^3.12.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "svelte": "^4.2.1",
+    "ts-loader": "^9.4.4",
+    "typescript": "^4.8.4"
   }
 }
