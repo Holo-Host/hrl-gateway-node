@@ -8,7 +8,17 @@ const app = express();
 const port = 3000;
 
 // Load environment variables from .env file
-dotenv.config();
+const args = process.argv.slice(2);  // Skip `node` and script name.
+let envFilePath;
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--env-file' && i + 1 < args.length) {
+    envFilePath = args[i + 1];
+    break;
+  }
+}
+
+dotenv.config({ path: envFilePath });
 const accountId = process.env.ACCOUNT_ID;
 const happ2hrlId = process.env.HAPP2HRL;
 const happ2hostId = process.env.HAPP2HOST;
