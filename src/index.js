@@ -17,7 +17,7 @@ for (let i = 0; i < args.length; i++) {
     break;
   }
 }
-
+console.log(`Loading environment variables from ${envFilePath}`);
 dotenv.config({ path: envFilePath });
 const accountId = process.env.ACCOUNT_ID;
 const happ2hrlId = process.env.HAPP2HRL;
