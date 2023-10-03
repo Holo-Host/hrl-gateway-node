@@ -10,6 +10,7 @@ import {
   getHostIdFromUrl,
   holoEncodeDnaHash,
 } from './utils.js';
+import { error } from 'console';
 
 const HappConfig = {
   name: '',
@@ -42,6 +43,8 @@ export default class EnvoyApi extends EventEmitter {
 
     this.envoy_ws.onopen = () => this.emit('open');
     this.envoy_ws.onclose = () => this.emit('close');
+    this.envoy_ws.onerror = (error) => console.log("WebSocket Error:", error);
+
 
     this.envoy_ws.onmessage = async (message) => {
       const decoded_message = await msgpackDecodeFromBlob(message.data);
@@ -69,25 +72,25 @@ export default class EnvoyApi extends EventEmitter {
     };
 
     // keep alive heart beat
-    this.heartbeat_interval = setInterval(() => {
-      this.get_app_status()
-    }, 30_000)
+    // this.heartbeat_interval = setInterval(() => {
+    //   this.get_app_status()
+    // }, 30_000)
   }
 
-  async get_app_status () {
-    console.log('EnvoyApi: Getting app status')
-    await this.sendRequest(app_status_request())
-  }
+  // async get_app_status () {
+  //   console.log('EnvoyApi: Getting app status')
+  //   await this.sendRequest(app_status_request())
+  // }
 
-  async install_app (membrane_proof) {
-    console.log('EnvoyApi: Installing app', membrane_proof)
-    await this.sendRequest(install_request(membrane_proof))
-  }
+  // async install_app (membrane_proof) {
+  //   console.log('EnvoyApi: Installing app', membrane_proof)
+  //   await this.sendRequest(install_request(membrane_proof))
+  // }
 
-  async enable_app () {
-    console.log('EnvoyApi: Enabling app')
-    await this.sendRequest(enable_request())
-  }
+  // async enable_app () {
+  //   console.log('EnvoyApi: Enabling app')
+  //   await this.sendRequest(enable_request())
+  // }
 
   async wait_for_app_status() {
     const id = this.next_response_id++

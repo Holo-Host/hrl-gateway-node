@@ -28,24 +28,44 @@ if (!accountId || !happ2hrlId || !happ2hostId || !apiToken) {
   throw new Error('Environment variables ACCOUNT_ID, HAPP2HRL, HAPP2HOST, and API_TOKEN are required');
 }
 
+const role_name = 'fractal_tribute'
+const zome_name = 'fractal_tribute'
+const fn_name = 'token_id_to_metadata'
+
 // Create a CloudflareKV instances for each KV namespace
-const happ2hrlKV = new CloudflareKV(accountId, happ2hrlId, apiToken);
+// const happ2hrlKV = new CloudflareKV(accountId, happ2hrlId, apiToken);
 const happ2hostKV = new CloudflareKV(accountId, happ2hostId, apiToken);
 
-async function fetchRoleAndZome(happ_id) {
-  const value = await happ2hrlKV.get(happ_id);
-  console.log(`Fetched role and zome for happ_id: ${happ_id}`);
-  return JSON.parse(JSON.stringify(value));
+// async function fetchRoleAndZome(happ_id) {
+//   const value = await happ2hrlKV.get(happ_id);
+//   console.log(`Fetched role and zome for happ_id: ${happ_id}`);
+//   return JSON.parse(JSON.stringify(value));
+// }
+
+function getFirstHalf(key) {
+    return key.split('_')[0];
 }
 
 async function fetchHostUrl(happ_id) {
-  const keys = await happ2hostKV.listKeys(`${happ_id}`);
-  console.log(`Fetched keys: ${JSON.stringify(keys)}`);
-  const randomKey = keys[Math.floor(Math.random() * keys.length)];
-  const host_url = await happ2hostKV.get(randomKey);
-  console.log(`Fetched host_url: ${host_url}`);
-  return host_url;
+  const keysResult = await happ2hostKV.listKeys(`${happ_id}`);
+
+  if (!keysResult.success || !keysResult.data || keysResult.data.length === 0) {
+    throw new Error(`Failed to fetch keys for happ_id ${happ_id}. Error: ${keysResult.error || 'No keys found'}`);
+  }
+
+  console.log(`Fetched keys: ${JSON.stringify(keysResult.data)}`);
+  const randomKey = keysResult.data[Math.floor(Math.random() * keysResult.data.length)];
+
+  const hostUrlResult = await happ2hostKV.get(randomKey);
+
+  if (!hostUrlResult.success || !hostUrlResult.data) {
+    throw new Error(`Failed to fetch host_url for key ${randomKey}. Error: ${hostUrlResult.error || 'No host_url found'}`);
+  }
+
+  console.log(`Fetched host_url: ${hostUrlResult.data}`);
+  return hostUrlResult.data;
 }
+
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -54,9 +74,15 @@ function delay(ms) {
 app.get('/:happ_id/:token_id', async (req, res) => {
   const { happ_id, token_id } = req.params;
   console.log(`Processing request for happ_id: ${happ_id}`);
+  let hostId
+  try {
+    hostId = await fetchHostUrl(happ_id);
+    console.log('Successfully fetched host URL:', hostId);
+  } catch (error) {
+    console.error('Error fetching host URL:', error.message);
+    return res.status(400).json({ error: "This application isn't registered for gateway requests"});
+  }
   
-  const { role_name, zome_name, fn_name } = await fetchRoleAndZome(happ_id);
-  const hostId = await fetchHostUrl(happ_id);
   const host_url = `${hostId}.holohost.dev`;
   
   // console.log(`Role: ${role_name}`);
@@ -84,22 +110,33 @@ app.get('/:happ_id/:token_id', async (req, res) => {
     agent_id: Codec.AgentId.encode(key_pair.publicKey()), 
   });
   
-  await delay(1000);
-  
-  console.log("Calling envoy api");
-  const response = await envoyApi.zome_call({
-    zome_name: zome_name,
-    fn_name: fn_name,
-    payload: token_id,
-    role_name: role_name,
-    cell_id: null,
-    cap_secret: null,
-  });
+  // await delay(1000);
+  envoyApi.on('open', async () => {  
+    console.log("Envoy api opened")
+    try {
+      console.log("Calling envoy api");
+      const response = await envoyApi.zome_call({
+        zome_name: zome_name,
+        fn_name: fn_name,
+        payload: token_id,
+        role_name: role_name,
+        cell_id: null,
+        cap_secret: null,
+      });
+      
+      envoyApi.close();
 
-  envoyApi.close();
-  
-  console.log('Sending response:', response);
-  res.json(response);
+      console.log("Sending response")
+      if (response.type === 'error' && response.data.includes("No game moves found for that token id")) {
+        return res.status(404).json({ error: "Invalid token ID" });
+      }
+
+      res.json(response.data);
+    } catch (error) {
+      console.error('Error during zome_call:', error);
+      res.status(500).json({ error: 'Failed to process request.' });
+    }
+  });
 });
 
 app.listen(port, () => {

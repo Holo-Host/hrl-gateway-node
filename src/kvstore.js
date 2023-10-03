@@ -13,10 +13,10 @@ class CloudflareKV {
 
     try {
       const response = await axios.get(url, { headers: this.headers });
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error) {
       console.error('Error getting key value:', error);
-      throw error;
+      return { success: false, error: error.response ? error.response.data : 'Unknown error' };
     }
   }
 
@@ -29,10 +29,10 @@ class CloudflareKV {
 
     try {
       const response = await axios.get(url, { headers: this.headers });
-      return response.data.result.map(keyObj => keyObj.name);
+      return { success: true, data: response.data.result.map(keyObj => keyObj.name) };
     } catch (error) {
       console.error('Error listing keys:', error);
-      throw error;
+      return { success: false, error: error.response ? error.response.data : 'Unknown error' };
     }
   }
 }
