@@ -42,8 +42,40 @@ const happ2hostKV = new CloudflareKV(accountId, happ2hostId, apiToken);
 //   return JSON.parse(JSON.stringify(value));
 // }
 
-function getFirstHalf(key) {
-    return key.split('_')[0];
+function h2d(s) {
+  // Validate input
+  if (typeof s !== 'string' || !s.match(/^[0-9a-fA-F]+$/)) {
+      throw new Error("Invalid hexadecimal input.");
+  }
+  
+  // Limit input length for performance considerations
+  const MAX_LENGTH = 1000; // You can adjust this value as needed
+  if (s.length > MAX_LENGTH) {
+      throw new Error("Input is too long.");
+  }
+
+  function add(x, y) {
+      var c = 0, r = [];
+      var x = x.split('').map(Number);
+      var y = y.split('').map(Number);
+      while(x.length || y.length) {
+          var s = (x.pop() || 0) + (y.pop() || 0) + c;
+          r.unshift(s < 10 ? s : s - 10); 
+          c = s < 10 ? 0 : 1;
+      }
+      if(c) r.unshift(c);
+      return r.join('');
+  }
+  
+  var dec = '0';
+  s.split('').forEach(function(chr) {
+      var n = parseInt(chr, 16);
+      for(var t = 8; t; t >>= 1) {
+          dec = add(dec, dec);
+          if(n & t) dec = add(dec, '1');
+      }
+  });
+  return dec;
 }
 
 async function fetchHostUrl(happ_id) {
@@ -73,6 +105,13 @@ function delay(ms) {
 
 app.get('/:happ_id/:token_id', async (req, res) => {
   const { happ_id, token_id } = req.params;
+  let token_id_bigint
+  try {
+    token_id_bigint = h2d(token_id);
+  } catch (error) {
+    console.error('Error converting token_id to bigint:', error.message);
+    return res.status(400).json({ error: "Invalid token ID" });
+  }
   console.log(`Processing request for happ_id: ${happ_id}`);
   let hostId
   try {
@@ -118,7 +157,7 @@ app.get('/:happ_id/:token_id', async (req, res) => {
       const response = await envoyApi.zome_call({
         zome_name: zome_name,
         fn_name: fn_name,
-        payload: token_id,
+        payload: token_id_bigint,
         role_name: role_name,
         cell_id: null,
         cap_secret: null,
@@ -128,7 +167,11 @@ app.get('/:happ_id/:token_id', async (req, res) => {
 
       console.log("Sending response")
       if (response.type === 'error' && response.data.includes("No game moves found for that token id")) {
-        return res.status(404).json({ error: "Invalid token ID" });
+        return res.status(404).json({ error: "Token ID not found" });
+      }
+
+      if (response.type === 'error' && response.data.includes("Could not parse token id")) {
+        return res.status(400).json({ error: "Invalid token ID" });
       }
 
       res.json(response.data);
