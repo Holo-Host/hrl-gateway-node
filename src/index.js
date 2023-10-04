@@ -174,7 +174,7 @@ app.get('/:happ_id/:token_id', async (req, res) => {
         return res.status(400).json({ error: "Invalid token ID" });
       }
 
-      res.json(response.data);
+      res.json(JSON.parse(response.data))
     } catch (error) {
       console.error('Error during zome_call:', error);
       res.status(500).json({ error: 'Failed to process request.' });
